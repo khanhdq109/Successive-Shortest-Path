@@ -1,7 +1,6 @@
 import heapq
 import networkx as nx 
 import matplotlib.pyplot as plt
-from tabulate import tabulate
 
 class link():
     def __init__ (self, o, d, capacity = 0, cost = 0):
@@ -22,7 +21,7 @@ class network():
     def update(self):
         self.linkArray = [link for link in self.linkArray if link.capacity > 0]
         
-    def draw_network(self, source=None, sink=None):
+    def draw_network(self, source = None, sink = None):
         # Create a directed graph
         G = nx.DiGraph()
         
@@ -63,44 +62,46 @@ def minFlow(net, path):
                 break
     return min_capacity
 
-def print_dict(flow_dict):
-    print('--------------')
-    print('--FLOW INFOR--')
-    print('--------------')
+def print_side_by_side(flow_dict, path_list):
+    print('--------------------------------------   |   --------------------------------------')
+    print('-----------FLOW INFORMATION-----------   |   --------------FOUND PATH--------------')
+    print('--------------------------------------   |   --------------------------------------')
+
     # Prepare data for tabulate
     table_data = []
+    max_path_length = 0
+    
+    # Prepare data for flow information table
     for key, value in flow_dict.items():
         link = f"{key[0]} -> {key[1]}"  # Format link as "O -> D"
         table_data.append([link, value])
     
-    # Print table with headers "Link" and "Flow"
-    print(tabulate(table_data, headers = ["Link", "Flow"]))
-    print('--------------')
+    # Calculate maximum path length
+    for path in path_list:
+        path_length = len(' -> '.join(path))
+        if path_length > max_path_length:
+            max_path_length = path_length
     
-def print_list(path_list):
-    print('')
-    intro_lines = ['--------------', '--FOUND PATH--', '--------------']
-    
-    # Calculate the maximum length across all printed lines
-    max_length = max(len(line) for line in intro_lines)
-    max_length = max(max_length, max(len('{}. {}'.format(i + 1, ' -> '.join(path))) for i, path in enumerate(path_list)))
-    
-    # Print introductory lines with aligned dashes
-    for line in intro_lines:
-        if line == '--FOUND PATH--':
-            # Calculate padding for center alignment
-            padding_length = max_length - len(line)
-            left_padding = padding_length // 2
-            right_padding = padding_length - left_padding
-            print('-' * left_padding + line + '-' * right_padding)
+    # Print both tables side by side
+    for i in range(max(len(flow_dict), len(path_list))):
+        flow_info_row = table_data[i] if i < len(flow_dict) else ['', '']
+        path_row = path_list[i] if i < len(path_list) else []
+        
+        flow_info_link = flow_info_row[0] if flow_info_row else ''
+        flow_info_flow = flow_info_row[1] if flow_info_row else ''
+        
+        path_info = ' -> '.join(path_row) if path_row else ''
+        
+        # Format path with index
+        if path_row:
+            formatted_path = f"{i + 1}. {path_info}"
         else:
-            print(line.ljust(max_length, '-'))
+            formatted_path = ''
+        
+        # Print row with padding for alignment
+        print(f"{flow_info_link:<36} {flow_info_flow:<1}   |   {formatted_path:<{max_path_length}}")
     
-    for i in range(len(path_list)):
-        print('{}. {}'.format(i + 1, ' -> '.join(path_list[i])))
-    
-    # Print concluding line with aligned dashes
-    print('--------------'.ljust(max_length, '-'))
+    print('--------------------------------------   |   --------------------------------------')
 
 def dijkstra(net, src, des):
     # Extract all unique nodes (vertices) from linkArray
@@ -186,23 +187,29 @@ def successive_shortest_path(net, source, sink, v):
 if __name__ == "__main__":
     # Create a sample network
     links = [
-        link('A', 'B', capacity = 4, cost = 10),
-        link('A', 'C', capacity = 2, cost = 20),
-        link('A', 'E', capacity = 6, cost = 5),
-        link('B', 'D', capacity = 4, cost = 10),
-        link('C', 'D', capacity = 8, cost = 15),
-        link('E', 'D', capacity = 2, cost = 10),
-        link('D', 'F', capacity = 8, cost = 5),
-        link('E', 'F', capacity = 10, cost = 25),
+        link('S', 'A', capacity = 10, cost = 5),
+        link('S', 'B', capacity = 8, cost = 3),
+        link('A', 'C', capacity = 6, cost = 4),
+        link('A', 'D', capacity = 4, cost = 2),
+        link('B', 'C', capacity = 4, cost = 6),
+        link('B', 'E', capacity = 5, cost = 7),
+        link('C', 'D', capacity = 3, cost = 1),
+        link('C', 'E', capacity = 6, cost = 5),
+        link('C', 'F', capacity = 7, cost = 8),
+        link('D', 'F', capacity = 5, cost = 3),
+        link('E', 'F', capacity = 9, cost = 4),
+        link('E', 'T', capacity = 8, cost = 10),
+        link('F', 'T', capacity = 12, cost = 6),
     ]
     net = network(links)
+
+    src_node = 'S'
+    des_node = 'T'
     
-    src_node = 'A'
-    des_node = 'F'
+    v = 12 # Total flow to be sent
     
-    v = 10
+    # Run the Successive Shortest Path algorithm
+    flowInfo, paths = successive_shortest_path(net, src_node, des_node, v)
     
-    flowInfo, paths = successive_shortest_path(net, src_node, des_node, 10)
-    
-    print_dict(flowInfo)
-    print_list(paths)
+    # Display flow information and found paths
+    print_side_by_side(flowInfo, paths)
